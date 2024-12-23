@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
+import { Wallet, RefreshCcw, DollarSign, Star, Users, Activity } from 'lucide-react';
 
 const DonationPortal = () => {
   const [status, setStatus] = useState('');
@@ -238,113 +239,136 @@ const DonationPortal = () => {
   }, []);
 
   return (
-    <div className="p-4 max-w-md mx-auto">
-      {!walletConnected ? (
-        <div className="space-y-4">
-          <button
-            onClick={connectWallet}
-            disabled={isLoading}
-            className="w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 disabled:bg-green-300 disabled:cursor-not-allowed"
-          >
-            {isLoading ? 'Connecting...' : 'Connect Wallet'}
-          </button>
-  
-          {/* Connection Stage Feedback */}
-          {connectionStage && (
-            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
-              <p className="text-yellow-700 text-sm">
-                Current Stage: {connectionStage}
-              </p>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <div className="p-4 bg-gray-50 border border-gray-200 rounded">
-            <p className="text-sm text-gray-600">Connected Wallet:</p>
-            <p className="font-mono text-sm break-all">{walletAddress}</p>
-          </div>
-  
-          <div className="space-y-4">
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-sm text-blue-600">Total Donations</p>
-                  <p className="text-2xl font-bold">{contractStats.totalDonations} ETH</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-blue-600">Total Donors</p>
-                  <p className="text-lg font-bold">{contractStats.donorCount}</p>
-                </div>
-              </div>
-            </div>
-  
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-purple-50 border border-purple-200 rounded">
-                <p className="text-sm text-purple-600">Your Total Donations</p>
-                <p className="text-xl font-bold">{contractStats.userDonations} ETH</p>
-              </div>
-              <div className={`p-4 rounded border ${getTierColor(contractStats.donorTier)}`}>
-                <p className="text-sm">Your Donor Tier</p>
-                <p className="text-xl font-bold">{contractStats.donorTier}</p>
-              </div>
-            </div>
-          </div>
-  
-          <div className="space-y-2">
-            <div className="p-4 bg-gray-50 border border-gray-200 rounded">
-              <div className="flex justify-between items-center mb-2">
-                <label htmlFor="donationAmount" className="text-sm text-gray-600">
-                  Donation Amount (ETH)
-                </label>
-                <span className="text-sm font-medium">{donationAmount} ETH</span>
-              </div>
-              <input
-                id="donationAmount"
-                type="range"
-                min={contractStats.minimumDonation}
-                max="1"
-                step="0.01"
-                value={donationAmount}
-                onChange={(e) => setDonationAmount(e.target.value)}
-                className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer"
-              />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>{contractStats.minimumDonation} ETH</span>
-                <span>1 ETH</span>
-              </div>
-            </div>
-  
-            <button
-              onClick={makeDonation}
-              disabled={isLoading || Number(donationAmount) < Number(contractStats.minimumDonation)}
-              className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Processing...' : `Donate ${donationAmount} ETH`}
-            </button>
-          </div>
-        </div>
-      )}
-  
-      {error && (
-        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded text-red-700">
-          {error}
-        </div>
-      )}
-  
-      {status && (
-        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
-          <pre className="whitespace-pre-line text-sm">
-            {status}
-            {txHash && (
-              <div className="mt-2 break-all">
-                Transaction Hash: {txHash}
-              </div>
-            )}
-          </pre>
+<div className="p-6 max-w-lg mx-auto bg-white shadow-md rounded-lg">
+  <h1 className="text-2xl font-bold text-center text-gray-800 mb-4">
+    <Activity className="inline-block w-6 h-6 mr-2 text-blue-600" />
+    Support Our Cause
+  </h1>
+
+  {!walletConnected ? (
+    <div className="space-y-6">
+      <button
+        onClick={connectWallet}
+        disabled={isLoading || isPending}
+        className="w-full bg-gradient-to-r from-green-400 to-green-600 text-white py-3 px-6 rounded-lg text-lg font-semibold shadow-md flex items-center justify-center hover:from-green-500 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <Wallet className="w-5 h-5 mr-2" />
+        {isLoading ? 'Connecting...' : 'Connect Wallet'}
+      </button>
+
+      {connectionStage && (
+        <div className="mt-2 p-4 bg-yellow-100 border border-yellow-300 rounded-md">
+          <p className="text-yellow-700 text-sm font-medium text-center">
+            <RefreshCcw className="inline-block w-5 h-5 mr-1" />
+            Current Stage: {connectionStage}
+          </p>
         </div>
       )}
     </div>
+  ) : (
+    <div className="space-y-6">
+      <div className="bg-gray-100 p-4 rounded-lg shadow-inner flex items-center space-x-4">
+        <Wallet className="w-6 h-6 text-gray-600" />
+        <div>
+          <p className="text-gray-600 text-sm">Connected Wallet:</p>
+          <p className="font-mono text-sm text-gray-800">{walletAddress}</p>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="bg-blue-100 p-6 rounded-lg shadow-lg flex justify-between items-center">
+          <div>
+            <p className="text-blue-600 font-medium flex items-center">
+              <DollarSign className="w-5 h-5 mr-1" />
+              Total Donations
+            </p>
+            <p className="text-3xl font-bold text-blue-900">
+              {contractStats.totalDonations} ETH
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-blue-600 font-medium flex items-center justify-end">
+              <Users className="w-5 h-5 mr-1" />
+              Total Donors
+            </p>
+            <p className="text-2xl font-bold text-blue-900">
+              {contractStats.donorCount}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-purple-100 p-4 rounded-lg shadow-inner flex items-center space-x-4">
+            <DollarSign className="w-6 h-6 text-purple-600" />
+            <div>
+              <p className="text-purple-600 font-medium">Your Total Donations</p>
+              <p className="text-2xl font-bold text-purple-900">
+                {contractStats.userDonations} ETH
+              </p>
+            </div>
+          </div>
+          <div className={`p-4 rounded-lg shadow-inner flex items-center space-x-4 ${getTierColor(contractStats.donorTier)}`}>
+            <Star className="w-6 h-6 text-yellow-600" />
+            <div>
+              <p className="text-sm font-medium">Your Donor Tier</p>
+              <p className="text-xl font-bold">{contractStats.donorTier}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-gray-50 p-6 rounded-lg shadow-inner">
+        <label htmlFor="donationAmount" className="block text-gray-600 font-medium mb-2 flex items-center">
+          <DollarSign className="w-5 h-5 mr-1" />
+          Donation Amount (ETH)
+        </label>
+        <input
+          id="donationAmount"
+          type="range"
+          min={contractStats.minimumDonation}
+          max="1"
+          step="0.01"
+          value={donationAmount}
+          onChange={(e) => setDonationAmount(e.target.value)}
+          className="w-full h-2 bg-blue-300 rounded-lg appearance-none cursor-pointer"
+        />
+        <div className="flex justify-between text-sm text-gray-500 mt-1">
+          <span>{contractStats.minimumDonation} ETH</span>
+          <span>1 ETH</span>
+        </div>
+      </div>
+
+      <button
+        onClick={makeDonation}
+        disabled={isLoading || Number(donationAmount) < Number(contractStats.minimumDonation)}
+        className="w-full bg-gradient-to-r from-blue-500 to-blue-700 text-white py-3 px-6 rounded-lg text-lg font-semibold shadow-md flex items-center justify-center hover:from-blue-600 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <DollarSign className="w-5 h-5 mr-2" />
+        {isLoading ? 'Processing...' : `Donate ${donationAmount} ETH`}
+      </button>
+    </div>
+  )}
+
+  {error && (
+    <div className="mt-6 p-4 bg-red-100 border border-red-300 rounded-lg text-red-700">
+      {error}
+    </div>
+  )}
+
+  {status && (
+    <div className="mt-6 p-4 bg-blue-100 border border-blue-300 rounded-lg">
+      <pre className="whitespace-pre-line text-sm text-blue-900">
+        {status}
+        {txHash && (
+          <div className="mt-2 break-all text-blue-600">
+            Transaction Hash: {txHash}
+          </div>
+        )}
+      </pre>
+    </div>
+  )}
+</div>
+
   );  
 };
 
