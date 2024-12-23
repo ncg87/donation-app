@@ -19,9 +19,17 @@ const DonationPortal = () => {
   const [donationAmount, setDonationAmount] = useState('0.01');
   const [connectionStage, setConnectionStage] = useState('');
   const [isPending, setIsPending] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
+  const [contractBalance, setContractBalance] = useState("0");
+  const [withdrawalAmount, setWithdrawalAmount] = useState("0");
+  const [totalWithdrawn, setTotalWithdrawn] = useState("0");
+  const [donorCount, setDonorCount] = useState(0);
+
 
 
   const CONTRACT_ABI = [
+    "function withdrawFunds() public",
+    "function getContractBalance() public view returns (uint256)",
     "function minimumDonation() public view returns (uint256)",
     "function donate() public payable",
     "function totalDonations() public view returns (uint256)",
@@ -40,75 +48,73 @@ const DonationPortal = () => {
       default: return 'bg-blue-50 border-blue-200 text-blue-600';
     }
   };
-
   const connectWallet = async () => {
-    if (isPending) {
-      console.warn("Wallet connection already in progress. Please wait.");
-      return;
-    }
-  
     try {
-      setIsPending(true);
       setIsLoading(true);
+      setIsPending(true);
       setError(null);
-      setConnectionStage('checking');
+      setConnectionStage("checking");
   
+      // Check if MetaMask is available
       if (!window.ethereum) {
-        throw new Error('MetaMask not detected. Please install MetaMask to use this dApp.');
+        throw new Error("MetaMask not detected. Please install MetaMask.");
       }
   
-      setConnectionStage('requesting');
+      setConnectionStage("requesting");
       const accounts = await window.ethereum.request({
-        method: 'eth_requestAccounts',
+        method: "eth_requestAccounts",
       });
   
       if (!accounts || accounts.length === 0) {
-        throw new Error('No accounts returned from MetaMask.');
+        throw new Error("No accounts returned from MetaMask.");
       }
+      console.log("Connected Wallet Address:", accounts[0]);
   
-      setConnectionStage('getting_chain');
-      const chainId = await window.ethereum.request({
-        method: 'eth_chainId',
-      });
-  
-      setConnectionStage('creating_provider');
+      setConnectionStage("creating_provider");
       const provider = new ethers.BrowserProvider(window.ethereum);
   
       const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS;
       if (!contractAddress) {
-        throw new Error('Contract address not configured. Please check your environment variables.');
+        throw new Error("Contract address not configured. Check .env file.");
       }
   
-      setConnectionStage('checking_contract');
-      const code = await provider.getCode(contractAddress);
+      const contract = new ethers.Contract(contractAddress, CONTRACT_ABI, provider);
   
-      if (code === '0x') {
-        throw new Error(`Contract not found at ${contractAddress}. Please verify deployment and network.`);
+      // Fetch the owner address
+      const ownerAddress = await contract.owner;
+      if (!ownerAddress) {
+        throw new Error("Owner address is undefined. Check the contract deployment.");
       }
+      console.log("Owner Address:", ownerAddress);
   
-      setConnectionStage('success');
+      // Compare connected wallet with owner
+      const isOwnerAddress = ownerAddress.toLowerCase() === accounts[0].toLowerCase();
+      console.log("Is Connected Wallet the Owner?", isOwnerAddress);
+  
+      // Update states
       setWalletConnected(true);
       setWalletAddress(accounts[0]);
-      await updateDonationStats(accounts[0]);
-    } catch (err) {
-      if (err.code === -32002) {
-        setError(
-          'A wallet connection request is already pending. Please check your MetaMask popup or refresh the page to reset.'
-        );
-      } else {
-        console.error('Wallet connection error:', {
-          message: err.message,
-          stage: connectionStage,
-          error: err,
-        });
-        setError(err.message || 'Unknown error occurred');
+      setIsOwner(isOwnerAddress);
+  
+      // Fetch additional data for the owner
+      if (isOwnerAddress) {
+        const balance = await contract.getContractBalance();
+        const donors = await contract.getDonorCount();
+        setContractBalance(ethers.formatEther(balance));
+        setDonorCount(Number(donors));
       }
+  
+      setConnectionStage("success");
+    } catch (err) {
+      console.error("Wallet Connection Error:", err.message);
+      setError(err.message || "Unknown error occurred");
     } finally {
       setIsLoading(false);
       setIsPending(false);
     }
   };
-
+  
+  
 
   const updateDonationStats = async (address) => {
     try {
@@ -218,6 +224,64 @@ const DonationPortal = () => {
     }
   };
 
+  const fetchOwnerData = async () => {
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const contract = new ethers.Contract(
+        import.meta.env.VITE_CONTRACT_ADDRESS,
+        CONTRACT_ABI,
+        provider
+      );
+  
+      // Check if the connected wallet is the owner
+      const contractOwner = await contract.owner();
+      setIsOwner(contractOwner.toLowerCase() === walletAddress.toLowerCase());
+  
+      if (contractOwner.toLowerCase() === walletAddress.toLowerCase()) {
+        // Fetch contract balance and donor count
+        const balance = await contract.getContractBalance();
+        const donors = await contract.getDonorCount();
+        setContractBalance(ethers.formatEther(balance));
+        setDonorCount(Number(donors));
+      }
+    } catch (error) {
+      console.error("Error fetching owner data:", error);
+    }
+  };
+  
+  useEffect(() => {
+    if (walletConnected) {
+      fetchOwnerData();
+    }
+  }, [walletConnected]);
+  
+
+  const withdrawFunds = async () => {
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(
+        import.meta.env.VITE_CONTRACT_ADDRESS,
+        CONTRACT_ABI,
+        signer
+      );
+  
+      const withdrawalWei = ethers.parseEther(withdrawalAmount);
+      const tx = await contract.withdrawFunds({ value: withdrawalWei });
+      await tx.wait();
+  
+      alert("Funds withdrawn successfully!");
+  
+      // Update data after withdrawal
+      fetchOwnerData();
+      setTotalWithdrawn((prev) => (Number(prev) + Number(withdrawalAmount)).toFixed(4));
+    } catch (error) {
+      console.error("Withdrawal error:", error);
+      alert("Failed to withdraw funds: " + (error.message || "Unknown error"));
+    }
+  };
+  
+
   useEffect(() => {
     if (window.ethereum) {
       window.ethereum.on('accountsChanged', (accounts) => {
@@ -237,6 +301,7 @@ const DonationPortal = () => {
       }
     };
   }, []);
+  
 
   return (
 <div className="p-6 max-w-lg mx-auto bg-white shadow-md rounded-lg">
@@ -264,6 +329,31 @@ const DonationPortal = () => {
           </p>
         </div>
       )}
+    </div>
+  ) :  isOwner ? (
+    <div>
+      <h2 className="text-lg font-bold mb-4">Owner Dashboard</h2>
+      <p className="mb-2">Contract Balance: {contractBalance} ETH</p>
+      <p className="mb-2">Total Donors: {contractStats.donorCount}</p>
+      <p className="mb-2">Total Withdrawn: {totalWithdrawn} ETH</p>
+      <label htmlFor="withdrawalAmount" className="block mb-2">Withdraw Amount (ETH):</label>
+      <input
+        type="range"
+        id="withdrawalAmount"
+        min="0"
+        max={contractBalance}
+        step="0.01"
+        value={withdrawalAmount}
+        onChange={(e) => setWithdrawalAmount(e.target.value)}
+        className="w-full mb-4"
+      />
+      <p className="text-sm text-gray-600 mb-4">Selected: {withdrawalAmount} ETH</p>
+      <button
+        onClick={withdrawFunds}
+        className="w-full bg-gradient-to-r from-red-500 to-red-700 text-white py-3 px-6 rounded-lg text-lg font-semibold"
+      >
+        Withdraw Funds
+      </button>
     </div>
   ) : (
     <div className="space-y-6">

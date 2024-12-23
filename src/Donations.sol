@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-contract Donations {
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
+contract Donations is ReentrancyGuard {
     // State variables
     address public owner;
     uint256 public totalDonations;
@@ -18,6 +20,9 @@ contract Donations {
     // Events
     event DonationReceived(address indexed donor, uint256 amount, uint256 timestamp);
     event TierUpgrade(address indexed donor, uint256 newTier);
+    event MinimumDonationUpdated(uint256 newMinimumDonation);
+
+    
     
     // Custom modifier for owner-only functions
     modifier onlyOwner() {
@@ -107,11 +112,22 @@ contract Donations {
     }
     
     // Owner functions
-    function withdrawFunds() public onlyOwner {
-        payable(owner).transfer(address(this).balance);
+    function withdrawFunds() public onlyOwner nonReentrant {
+        uint256 balance = address(this).balance;
+        require(balance > 0, "No funds available to withdraw");
+
+        (bool success, ) = owner.call{value: balance}("");
+        require(success, "Transfer failed");
+
+        // Debugging log
+        emit WithdrawalSuccess(owner, balance);
     }
+
     
     function setMinimumDonation(uint256 _newMinimum) public onlyOwner {
+        require(_newMinimum > 0, "Minimum donation must be greater than 0");
         minimumDonation = _newMinimum;
+        emit MinimumDonationUpdated(_newMinimum);
     }
+    
 }
