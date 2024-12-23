@@ -1,0 +1,14 @@
+{
+  "name": "donation-app",
+  "private": true,
+  "version": "1.0.0",
+  "description": "A simple donation app on the web",
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "build": "pnpm --filter web build",
+    "anvil": "anvil --mnemonic \"fall diamond black crack alpha parent ocean interest radio bag certain rubber\""
+  },
+  "workspaces": [
+    "web"
+  ]
+}
