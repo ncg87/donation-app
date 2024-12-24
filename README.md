@@ -1,66 +1,68 @@
-## Foundry
+# Donation App
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+This is a decentralized donation platform built using Solidity, React, and Foundry. The app allows users to connect their Ethereum wallet, make donations, and track their contributions and donor tier. It also provides functionalities for contract owners to manage funds and view statistics.
 
-Foundry consists of:
+## Features
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+- **Wallet Integration**: Seamless connection with MetaMask for managing Ethereum transactions.
+- **Donation Tracking**: View total donations, individual contributions, and donor tiers (Bronze, Silver, Gold).
+- **Real-Time Updates**: Updates donation stats dynamically.
+- **Contract Management**: Owners can view the contract balance, total donations, and withdraw funds.
+- **Responsive Design**: Built with TailwindCSS for a clean and responsive UI.
 
-## Documentation
+## Technologies Used
 
-https://book.getfoundry.sh/
+- **Blockchain**: Ethereum smart contracts using Solidity and deployed via Foundry.
+- **Frontend**: React with Vite for fast development and deployment.
+- **Styling**: TailwindCSS for custom styling.
+- **Ethereum Library**: Ethers.js for interacting with the Ethereum blockchain.
 
-## Usage
+## Prerequisites
 
-### Build
+- [Node.js](https://nodejs.org/) and [pnpm](https://pnpm.io/) installed.
+- [Foundry](https://github.com/foundry-rs/foundry) for smart contract development.
+- MetaMask extension in your browser.
 
-```shell
-$ forge build
+## Getting Started
+
+### 1. Clone the repository
+
+```bash
+git clone <repository-url>
+cd donation-app
+```
+### 2. Install dependencies
+
+```bash
+pnpm install
+```
+### 3. Start the development server
+
+```bash
+pnpm dev
 ```
 
-### Test
+### 4. Deploy the Smart Contract
 
-```shell
-$ forge test
+1. Set up your Foundry environment (foundry.toml configuration already included).
+2. Compile the contract:
+```bash
+forge build
 ```
+3. Deploy the contract using Foundry or any Ethereum-compatible deployment tool.
 
-### Format
+### 5. Connect Wallet and Test
+Open your browser at http://localhost:3000 and connect your wallet to start donating.
 
-```shell
-$ forge fmt
+# Project Structure
+ - contracts: Solidity contracts for managing donations.
+ - web: Frontend application built using React and Vite.
+ - config: Foundry and Etherscan API configurations.
+# Environment Variables
+Create a .env file in the root directory with the following values:
+
+```bash
+VITE_CONTRACT_ADDRESS=<Deployed_Contract_Address>
 ```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+# Contribution
+Contributions are welcome! Please open an issue or submit a pull request.
