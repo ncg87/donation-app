@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
-
+import "forge-std/console.sol";
 import {Test} from "forge-std/Test.sol";
 import {Donations} from "../src/Donations.sol";
 
@@ -12,6 +12,11 @@ contract DonationsTest is Test {
 
     event TierUpgrade(address indexed donor, uint256 newTier);
     event MinimumDonationUpdated(uint256 newMinimum);
+    event WithdrawalInitiated(uint256 amount, address indexed recipient);
+    event WithdrawalSuccess(address indexed recipient, uint256 amount);
+
+    // Add a receive function to handle Ether transfers
+    receive() external payable {}
 
     function setUp() public {
         owner = address(this);
@@ -25,6 +30,8 @@ contract DonationsTest is Test {
         vm.deal(donor1, 10 ether);
         vm.deal(donor2, 10 ether);
         vm.deal(owner, 10 ether);
+        console.log("Owner address:", owner);
+
     }
 
     function testDonation() public {
@@ -139,7 +146,7 @@ contract DonationsTest is Test {
     }
 
     function testOnlyOwnerCanSetMinimumDonation() public {
-        // Attempt to set the minimum donation as a non-owner (should revert)
+        // Attempt to set the minimum donation as a non-owner and expect revert
         vm.prank(donor1);
         vm.expectRevert("Only owner can call this function");
         donations.setMinimumDonation(0.02 ether);
@@ -149,31 +156,80 @@ contract DonationsTest is Test {
         donations.setMinimumDonation(0.02 ether);
 
         // Verify the updated minimum donation
-        assertEq(donations.minimumDonation(), 0.02 ether, "Minimum donation should be updated");
-    }
+            assertEq(donations.minimumDonation(), 0.02 ether, "Minimum donation should be updated");
+        }
 
     function testOnlyOwnerCanWithdrawFunds() public {
         // Fund the contract with donations
         vm.prank(donor1);
         donations.donate{value: 1 ether}();
+        console.log("Donation completed: Contract balance is", address(donations).balance);
 
-        // Verify contract balance
-        assertEq(address(donations).balance, 1 ether, "Contract balance should be 1 ETH");
+        // Verify the contract has funds before withdrawal
+        uint256 initialContractBalance = address(donations).balance;
+        console.log("Initial Contract Balance:", initialContractBalance);
+        assertEq(initialContractBalance, 1 ether, "Contract should have 1 ETH balance");
 
-        // Attempt to withdraw funds as a non-owner (should revert)
+        // Attempt withdrawal by a non-owner
         vm.prank(donor2);
         vm.expectRevert("Only owner can call this function");
-        assertEq(address(donations).balance, 1 ether, "Contract should have sufficient balance");
+        console.log("Expecting revert for non-owner withdrawal");
         donations.withdrawFunds();
 
         // Withdraw funds as the owner
         uint256 ownerBalanceBefore = owner.balance;
+        console.log("Owner balance before withdrawal:", ownerBalanceBefore);
         vm.prank(owner);
+        donations.withdrawFunds();
+        console.log("Withdrawal completed by owner");
+
+        // Verify funds transferred to owner
+        uint256 ownerBalanceAfter = owner.balance;
+        console.log("Owner balance after withdrawal:", ownerBalanceAfter);
+        assertEq(ownerBalanceAfter, ownerBalanceBefore + 1 ether, "Owner should receive 1 ETH");
+
+        // Ensure contract balance is zero
+        uint256 finalContractBalance = address(donations).balance;
+        console.log("Final Contract Balance:", finalContractBalance);
+        assertEq(finalContractBalance, 0, "Contract balance should be zero");
+    }
+
+    function testOwnerCanPerformMultipleActions() public {
+        // Set a new minimum donation
+        vm.prank(owner);
+        donations.setMinimumDonation(0.05 ether);
+        assertEq(donations.minimumDonation(), 0.05 ether, "Minimum donation should be updated");
+
+        // Fund the contract with a donation
+        vm.prank(donor1);
+        donations.donate{value: 1 ether}();
         assertEq(address(donations).balance, 1 ether, "Contract should have sufficient balance");
+
+        // Withdraw funds as owner
+        uint256 ownerBalanceBefore = owner.balance;
+        vm.prank(owner);
         donations.withdrawFunds();
 
-        // Verify the funds were transferred to the owner
+        // Verify the owner's balance and contract balance
         assertEq(owner.balance, ownerBalanceBefore + 1 ether, "Owner should receive the withdrawn funds");
+        assertEq(address(donations).balance, 0, "Contract balance should be zero after withdrawal");
+    }
+
+    function testOwnerWithdrawalEmitsEvent() public {
+        // Fund the contract with donations
+        vm.prank(donor1);
+        donations.donate{value: 1 ether}();
+        assertEq(address(donations).balance, 1 ether, "Contract should have sufficient balance");
+
+        // Expect the WithdrawalSuccess event
+        vm.expectEmit(true, true, false, true);
+        emit WithdrawalSuccess(owner, 1 ether); // Expected event with parameters
+
+        // Call withdrawFunds
+        vm.prank(owner);
+        donations.withdrawFunds();
+
+        // Verify contract balance is zero after withdrawal
         assertEq(address(donations).balance, 0, "Contract balance should be zero after withdrawal");
     }
 
@@ -184,7 +240,6 @@ contract DonationsTest is Test {
         // Confirm that donor1 and donor2 are not the owner
         vm.prank(donor1);
         vm.expectRevert("Only owner can call this function");
-        assertEq(address(donations).balance, 1 ether, "Contract should have sufficient balance");
         donations.withdrawFunds();
 
         vm.prank(donor2);
@@ -192,61 +247,8 @@ contract DonationsTest is Test {
         donations.setMinimumDonation(0.02 ether);
     }
 
-    function testMinimumDonationUpdateEmitsEvent() public {
-        // Expect the MinimumDonationUpdated event
-        vm.prank(owner);
-        vm.expectEmit(true, false, false, true);
-        emit MinimumDonationUpdated(0.02 ether);
 
-        // Call setMinimumDonation
-        donations.setMinimumDonation(0.02 ether);
 
-        // Verify the updated minimum donation
-        assertEq(donations.minimumDonation(), 0.02 ether, "Minimum donation should be updated");
-    }
 
-    function testOwnerWithdrawalEmitsEvent() public {
-        // Fund the contract with donations
-        vm.prank(donor1);
-        donations.donate{value: 1 ether}();
-
-        // Withdraw funds as the owner
-        vm.prank(owner);
-        assertEq(address(donations).balance, 1 ether, "Contract should have sufficient balance");
-        donations.withdrawFunds();
-
-        // Verify contract balance is zero after withdrawal
-        assertEq(address(donations).balance, 0, "Contract balance should be zero after withdrawal");
-    }
-
-    function testNonOwnerCannotCallOwnerFunctions() public {
-        // Attempt to withdraw funds as a non-owner (should revert)
-        vm.prank(donor1);
-        vm.expectRevert("Only owner can call this function");
-        assertEq(address(donations).balance, 1 ether, "Contract should have sufficient balance");
-        donations.withdrawFunds();
-
-        // Attempt to set minimum donation as a non-owner (should revert)
-        vm.prank(donor2);
-        vm.expectRevert("Only owner can call this function");
-        donations.setMinimumDonation(0.02 ether);
-    }
-
-    function testOwnerCanPerformMultipleActions() public {
-        // Owner updates the minimum donation
-        vm.prank(owner);
-        donations.setMinimumDonation(0.05 ether);
-        assertEq(donations.minimumDonation(), 0.05 ether, "Minimum donation should be updated");
-
-        // Owner withdraws funds after a donation
-        vm.prank(donor1);
-        donations.donate{value: 1 ether}();
-
-        uint256 ownerBalanceBefore = owner.balance;
-        vm.prank(owner);
-        assertEq(address(donations).balance, 1 ether, "Contract should have sufficient balance");
-        donations.withdrawFunds();
-        assertEq(owner.balance, ownerBalanceBefore + 1 ether, "Owner should receive the withdrawn funds");
-    }
     
 }

@@ -29,13 +29,14 @@ const DonationPortal = () => {
 
   const CONTRACT_ABI = [
     "function withdrawFunds() public",
-    "function getContractBalance() public view returns (uint256)",
     "function minimumDonation() public view returns (uint256)",
+    "function getContractBalance() public view returns (uint256)",
     "function donate() public payable",
     "function totalDonations() public view returns (uint256)",
     "function donorTotalContributions(address) public view returns (uint256)",
     "function getDonorTier(address) public view returns (string)",
     "function getDonorCount() public view returns (uint256)",
+    "function owner() public view returns (address)",
     "event DonationReceived(address indexed donor, uint256 amount, uint256 timestamp)",
     "event TierUpgrade(address indexed donor, uint256 newTier)"
   ];
@@ -88,17 +89,18 @@ const DonationPortal = () => {
       console.log("Owner Address:", ownerAddress);
   
       // Compare connected wallet with owner
-      const isOwnerAddress = ownerAddress.toLowerCase() === accounts[0].toLowerCase();
+      const isOwnerAddress = ownerAddress === accounts[0];
       console.log("Is Connected Wallet the Owner?", isOwnerAddress);
   
       // Update states
       setWalletConnected(true);
       setWalletAddress(accounts[0]);
       setIsOwner(isOwnerAddress);
-  
+      
+      
       // Fetch additional data for the owner
       if (isOwnerAddress) {
-        const balance = await contract.getContractBalance();
+        const balance = await contract.getContractBalance()
         const donors = await contract.getDonorCount();
         setContractBalance(ethers.formatEther(balance));
         setDonorCount(Number(donors));
@@ -180,18 +182,22 @@ const DonationPortal = () => {
         throw new Error(`Donation must be at least ${ethers.formatEther(minDonation)} ETH`);
       }
 
+      console.log("Sending Donation:", donationAmount);
+      console.log("Submitting donation:", donationWei);
       // Send donation
       const tx = await contract.donate({
         value: donationWei,
-        gasLimit: 200000
       });
+      console.log("Transaction Hash:", tx.hash);
       
       setTxHash(tx.hash);
+      console.log("Transaction submitted:", tx);
       setStatus(`Transaction submitted: ${tx.hash}`);
 
       const receipt = await tx.wait();
       
       if (receipt.status === 1) {
+        console.log("Donation successful:", receipt);
         setStatus('Transaction successful!');
         await updateDonationStats(walletAddress);
 
@@ -226,22 +232,32 @@ const DonationPortal = () => {
 
   const fetchOwnerData = async () => {
     try {
+      const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS;
       const provider = new ethers.BrowserProvider(window.ethereum);
       const contract = new ethers.Contract(
         import.meta.env.VITE_CONTRACT_ADDRESS,
         CONTRACT_ABI,
         provider
       );
+      
+      console.log("Contract Address:", contractAddress);
+      console.log("Owner Address:", await contract.owner());
+      console.log("Total Donations:", ethers.formatEther(await contract.totalDonations()));
+      console.log("Minimum Donation:", ethers.formatEther(await contract.minimumDonation()));
   
       // Check if the connected wallet is the owner
       const contractOwner = await contract.owner();
-      setIsOwner(contractOwner.toLowerCase() === walletAddress.toLowerCase());
+
+      const isOwnerAddress = contractOwner.toLowerCase() === walletAddress.toLowerCase();
+
+      setIsOwner(isOwnerAddress);
   
-      if (contractOwner.toLowerCase() === walletAddress.toLowerCase()) {
+      if (isOwnerAddress) {
         // Fetch contract balance and donor count
         const balance = await contract.getContractBalance();
         const donors = await contract.getDonorCount();
-        setContractBalance(ethers.formatEther(balance));
+        const formattedBalance = ethers.formatEther(balance);
+        setContractBalance(formattedBalance);
         setDonorCount(Number(donors));
       }
     } catch (error) {
@@ -253,22 +269,36 @@ const DonationPortal = () => {
     if (walletConnected) {
       fetchOwnerData();
     }
-  }, [walletConnected]);
+    if (walletAddress && walletConnected) {
+      updateDonationStats(walletAddress);
+    }
+  }, [walletConnected, walletAddress]);
   
 
   const withdrawFunds = async () => {
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
+      
+      const balance = await provider.getBalance(import.meta.env.VITE_CONTRACT_ADDRESS);
+      console.log("Contract Balance (in wei):", balance.toString());
+
+      if (balance === 0n) {
+        throw new Error("No funds available in the contract");
+      }
+
       const signer = await provider.getSigner();
+
       const contract = new ethers.Contract(
         import.meta.env.VITE_CONTRACT_ADDRESS,
         CONTRACT_ABI,
         signer
+
       );
   
       const withdrawalWei = ethers.parseEther(withdrawalAmount);
-      const tx = await contract.withdrawFunds({ value: withdrawalWei });
-      await tx.wait();
+      const tx = await contract.withdrawFunds();
+      const receipt = await tx.wait();
+      console.log("Withdrawal receipt:", receipt);
   
       alert("Funds withdrawn successfully!");
   

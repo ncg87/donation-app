@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-
-contract Donations is ReentrancyGuard {
+contract Donations {
     // State variables
     address public owner;
     uint256 public totalDonations;
@@ -21,7 +19,10 @@ contract Donations is ReentrancyGuard {
     event DonationReceived(address indexed donor, uint256 amount, uint256 timestamp);
     event TierUpgrade(address indexed donor, uint256 newTier);
     event MinimumDonationUpdated(uint256 newMinimumDonation);
-
+    event WithdrawalSuccess(address indexed owner, uint256 amount);
+    event WithdrawalInitiated(uint256 amount, address indexed recipient);
+    event TransferStatus(bool success);
+    event DebugWithdraw(uint256 contractBalance, address owner);
     
     
     // Custom modifier for owner-only functions
@@ -42,17 +43,26 @@ contract Donations is ReentrancyGuard {
     
     // Fallback and receive functions to accept direct ETH transfers
     receive() external payable {
-        _processDonation();
+        if (msg.value >= minimumDonation) {
+            _processDonation();
+        }
     }
     
     fallback() external payable {
-        _processDonation();
+        if (msg.value >= minimumDonation) {
+            _processDonation();
+        }
     }
     
     // Main donation function
     function donate() public payable {
         _processDonation();
     }
+
+    function getContractBalance() public view returns (uint256) {
+        return address(this).balance;
+    }
+
     
     // Internal function to process donations
     function _processDonation() internal {
@@ -67,7 +77,7 @@ contract Donations is ReentrancyGuard {
         // Update donor's total contributions
         donorTotalContributions[msg.sender] += msg.value;
         totalDonations += msg.value;
-        
+
         // Check and update donor tier
         _updateDonorTier(msg.sender);
         
@@ -112,11 +122,15 @@ contract Donations is ReentrancyGuard {
     }
     
     // Owner functions
-    function withdrawFunds() public onlyOwner nonReentrant {
+    function withdrawFunds() public onlyOwner {
         uint256 balance = address(this).balance;
+        emit DebugWithdraw(balance, owner);
+
         require(balance > 0, "No funds available to withdraw");
+        emit WithdrawalInitiated(balance, owner);
 
         (bool success, ) = owner.call{value: balance}("");
+        emit TransferStatus(success); // Add this log for debugging
         require(success, "Transfer failed");
 
         // Debugging log
