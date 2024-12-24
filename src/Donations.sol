@@ -6,7 +6,7 @@ contract Donations {
     address public owner;
     uint256 public totalDonations;
     uint256 public donorCount;
-    uint256 public minimumDonation;
+    uint256 public minimumDonation = 0.001 ether;
     
     // Mapping to track individual donor contributions
     mapping(address => uint256) public donorTotalContributions;
@@ -36,9 +36,8 @@ contract Donations {
     uint256 constant SILVER_THRESHOLD = 0.5 ether;
     uint256 constant GOLD_THRESHOLD = 1 ether;
     
-    constructor(uint256 _minimumDonation) {
+    constructor() {
         owner = msg.sender;
-        minimumDonation = _minimumDonation;
     }
     
     // Fallback and receive functions to accept direct ETH transfers

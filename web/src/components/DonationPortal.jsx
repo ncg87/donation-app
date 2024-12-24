@@ -50,7 +50,9 @@ const DonationPortal = () => {
     }
   };
   const connectWallet = async () => {
+    console.log("Connecting Wallet");
     try {
+      console.log("Contract Address:", import.meta.env.VITE_CONTRACT_ADDRESS);
       setIsLoading(true);
       setIsPending(true);
       setError(null);

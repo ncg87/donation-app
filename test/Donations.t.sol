@@ -174,13 +174,13 @@ contract DonationsTest is Test {
         vm.prank(donor2);
         vm.expectRevert("Only owner can call this function");
         console.log("Expecting revert for non-owner withdrawal");
-        donations.withdrawFunds();
+        donations.withdrawFunds(address(donations).balance);
 
         // Withdraw funds as the owner
         uint256 ownerBalanceBefore = owner.balance;
         console.log("Owner balance before withdrawal:", ownerBalanceBefore);
         vm.prank(owner);
-        donations.withdrawFunds();
+        donations.withdrawFunds(address(donations).balance);
         console.log("Withdrawal completed by owner");
 
         // Verify funds transferred to owner
@@ -208,7 +208,7 @@ contract DonationsTest is Test {
         // Withdraw funds as owner
         uint256 ownerBalanceBefore = owner.balance;
         vm.prank(owner);
-        donations.withdrawFunds();
+        donations.withdrawFunds(address(donations).balance);
 
         // Verify the owner's balance and contract balance
         assertEq(owner.balance, ownerBalanceBefore + 1 ether, "Owner should receive the withdrawn funds");
@@ -227,7 +227,7 @@ contract DonationsTest is Test {
 
         // Call withdrawFunds
         vm.prank(owner);
-        donations.withdrawFunds();
+        donations.withdrawFunds(address(donations).balance);
 
         // Verify contract balance is zero after withdrawal
         assertEq(address(donations).balance, 0, "Contract balance should be zero after withdrawal");
@@ -240,7 +240,7 @@ contract DonationsTest is Test {
         // Confirm that donor1 and donor2 are not the owner
         vm.prank(donor1);
         vm.expectRevert("Only owner can call this function");
-        donations.withdrawFunds();
+        donations.withdrawFunds(address(donations).balance);
 
         vm.prank(donor2);
         vm.expectRevert("Only owner can call this function");
