@@ -6,4 +6,8 @@ libs = ["lib"]
 [etherscan]
 local = { key = "${ETHERSCAN_API_KEY}" }
 
+[rpc_endpoints]
+sepolia = { url = "https://eth-sepolia.g.alchemy.com/v2/-lzwv4SFr4482synUPE1sTz1nUwF97-Q" }
+mainnet = { url = "https://eth-mainnet.g.alchemy.com/v2/-lzwv4SFr4482synUPE1sTz1nUwF97-Q" }
+
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
