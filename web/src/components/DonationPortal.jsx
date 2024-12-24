@@ -359,7 +359,7 @@ const DonationPortal = () => {
 <div className="p-6 max-w-lg mx-auto bg-white shadow-md rounded-lg">
   <h1 className="text-2xl font-bold text-center text-gray-800 mb-4">
     <Activity className="inline-block w-6 h-6 mr-2 text-blue-600" />
-    Support Our Cause
+    Support the Cause
   </h1>
 
   {!walletConnected ? (
@@ -382,30 +382,69 @@ const DonationPortal = () => {
         </div>
       )}
     </div>
-  ) :  isOwner ? (
-    <div>
-      <h2 className="text-lg font-bold mb-4">Owner Dashboard</h2>
-      <p className="mb-2">Contract Balance: {contractBalance} ETH</p>
-      <p className="mb-2">Total Donors: {contractStats.donorCount}</p>
-      <p className="mb-2">Total Withdrawn: {totalWithdrawn} ETH</p>
-      <label htmlFor="withdrawalAmount" className="block mb-2">Withdraw Amount (ETH):</label>
-      <input
-        type="range"
-        id="withdrawalAmount"
-        min="0"
-        max={contractBalance}
-        step="0.01"
-        value={withdrawalAmount}
-        onChange={(e) => setWithdrawalAmount(e.target.value)}
-        className="w-full mb-4"
-      />
-      <p className="text-sm text-gray-600 mb-4">Selected: {withdrawalAmount} ETH</p>
-      <button
-        onClick={withdrawFunds}
-        className="w-full bg-gradient-to-r from-red-500 to-red-700 text-white py-3 px-6 rounded-lg text-lg font-semibold"
-      >
-        Withdraw Funds
-      </button>
+  ) : isOwner ? (
+    <div className="space-y-4">
+      <div className="bg-blue-100 p-6 rounded-lg shadow-lg flex justify-between items-center">
+        <div>
+          <p className="text-blue-600 font-medium flex items-center">
+            <DollarSign className="w-5 h-5 mr-1" />
+            Total Donations
+          </p>
+          <p className="text-3xl font-bold text-blue-900">{contractStats.totalDonations} ETH</p>
+        </div>
+        <div className="text-right">
+          <p className="text-blue-600 font-medium flex items-center justify-end">
+            <Users className="w-5 h-5 mr-1" />
+            Total Donors
+          </p>
+          <p className="text-2xl font-bold text-blue-900">{contractStats.donorCount}</p>
+        </div>
+      </div>
+
+      <div className="bg-purple-100 p-6 rounded-lg shadow-lg flex justify-between items-center">
+        <div>
+          <p className="text-purple-600 font-medium flex items-center">
+            <DollarSign className="w-5 h-5 mr-1" />
+            Total Withdrawn
+          </p>
+          <p className="text-3xl font-bold text-purple-900">{totalWithdrawn} ETH</p>
+        </div>
+        <div className="text-right">
+          <p className="text-purple-600 font-medium flex items-center justify-end">
+            <Wallet className="w-5 h-5 mr-1" />
+            Contract Balance
+          </p>
+          <p className="text-2xl font-bold text-purple-900">{contractBalance} ETH</p>
+        </div>
+      </div>
+
+      <div className="bg-gray-50 p-6 rounded-lg shadow-inner mt-6">
+        <label htmlFor="withdrawalAmount" className="block text-gray-600 font-medium mb-2 flex items-center">
+          <DollarSign className="w-5 h-5 mr-1" />
+          Withdrawal Amount (ETH)
+        </label>
+        <input
+          type="range"
+          id="withdrawalAmount"
+          min="0"
+          max={contractBalance}
+          step="0.01"
+          value={withdrawalAmount}
+          onChange={(e) => setWithdrawalAmount(e.target.value)}
+          className="w-full h-2 bg-red-300 rounded-lg appearance-none cursor-pointer"
+        />
+        <div className="flex justify-between text-sm text-gray-500 mt-1">
+          <span>0 ETH</span>
+          <span>{contractBalance} ETH</span>
+        </div>
+        <p className="text-sm text-gray-600 mb-4 mt-2">Selected: {withdrawalAmount} ETH</p>
+        <button
+          onClick={withdrawFunds}
+          className="w-full bg-gradient-to-r from-red-500 to-red-700 text-white py-3 px-6 rounded-lg text-lg font-semibold shadow-md hover:from-red-600 hover:to-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Withdraw Funds
+        </button>
+      </div>
     </div>
   ) : (
     <div className="space-y-6">
