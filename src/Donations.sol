@@ -43,15 +43,10 @@ contract Donations {
     
     // Fallback and receive functions to accept direct ETH transfers
     receive() external payable {
-        if (msg.value >= minimumDonation) {
-            _processDonation();
-        }
     }
     
     fallback() external payable {
-        if (msg.value >= minimumDonation) {
-            _processDonation();
-        }
+        revert("Fallback function called");
     }
     
     // Main donation function
@@ -122,14 +117,16 @@ contract Donations {
     }
     
     // Owner functions
-    function withdrawFunds() public onlyOwner {
+    function withdrawFunds(uint256 amount) public onlyOwner {
         uint256 balance = address(this).balance;
-        emit DebugWithdraw(balance, owner);
+        // Validate withdrawal amount
+        require(amount > 0, "Withdrawal amount must be greater than 0");
+        require(amount <= balance, "Not enough funds available to withdraw");
 
-        require(balance > 0, "No funds available to withdraw");
-        emit WithdrawalInitiated(balance, owner);
+        emit WithdrawalInitiated(amount, owner);
 
-        (bool success, ) = owner.call{value: balance}("");
+        // Perform the withdrawal
+        (bool success, ) = owner.call{value: amount}("");
         emit TransferStatus(success); // Add this log for debugging
         require(success, "Transfer failed");
 

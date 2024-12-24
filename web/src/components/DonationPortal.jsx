@@ -28,7 +28,7 @@ const DonationPortal = () => {
 
 
   const CONTRACT_ABI = [
-    "function withdrawFunds() public",
+    "function withdrawFunds(uint256 amount) public",
     "function minimumDonation() public view returns (uint256)",
     "function getContractBalance() public view returns (uint256)",
     "function donate() public payable",
@@ -240,6 +240,24 @@ const DonationPortal = () => {
         provider
       );
       
+
+      // Fetch contract balance
+      const balance = await contract.getContractBalance(); // Ensure ABI contains getContractBalance()
+      const formattedBalance = ethers.formatEther(balance);
+      console.log("Contract Balance (ETH):", formattedBalance);
+
+      // Fetch total donations
+      const totalDonations = await contract.totalDonations(); // Ensure ABI contains totalDonations()
+      const formattedTotalDonations = ethers.formatEther(totalDonations);
+      console.log("Total Donations (ETH):", formattedTotalDonations);
+
+      // Calculate total withdrawn
+      const totalWithdrawn = (Number(formattedTotalDonations) - Number(formattedBalance)).toFixed(4);
+      console.log("Total Withdrawn (ETH):", totalWithdrawn);
+
+      // Update states
+      setContractBalance(formattedBalance);
+      setTotalWithdrawn(totalWithdrawn);
       console.log("Contract Address:", contractAddress);
       console.log("Owner Address:", await contract.owner());
       console.log("Total Donations:", ethers.formatEther(await contract.totalDonations()));
@@ -279,15 +297,20 @@ const DonationPortal = () => {
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       
+      // Get current balance and check if it is greater than 0
       const balance = await provider.getBalance(import.meta.env.VITE_CONTRACT_ADDRESS);
       console.log("Contract Balance (in wei):", balance.toString());
-
       if (balance === 0n) {
         throw new Error("No funds available in the contract");
       }
 
-      const signer = await provider.getSigner();
+      // Get amount to withdraw and check if it is greater than 0
+      const withdrawalWei = ethers.parseEther(withdrawalAmount);
+      if (withdrawalWei > balance) {
+        throw new Error("Not enough funds in the contract to withdraw the specified amount");
+      }
 
+      const signer = await provider.getSigner();
       const contract = new ethers.Contract(
         import.meta.env.VITE_CONTRACT_ADDRESS,
         CONTRACT_ABI,
@@ -295,12 +318,11 @@ const DonationPortal = () => {
 
       );
   
-      const withdrawalWei = ethers.parseEther(withdrawalAmount);
-      const tx = await contract.withdrawFunds();
+      const tx = await contract.withdrawFunds(withdrawalWei);
       const receipt = await tx.wait();
       console.log("Withdrawal receipt:", receipt);
   
-      alert("Funds withdrawn successfully!");
+      alert(`Successfully withdrew ${withdrawalAmount} ETH!`);
   
       // Update data after withdrawal
       fetchOwnerData();
